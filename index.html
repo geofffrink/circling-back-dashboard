@@ -547,7 +547,7 @@
   <div class="tab-content" id="tab-strategy">
     <div class="grid-2 section-gap">
       <div class="panel">
-        <div class="panel-title">Best Time to Post <span class="badge">based on pub. day patterns</span></div>
+        <div class="panel-title">Engagement Rate Analysis <span class="badge">virality predictor</span></div>
         <div id="heatmap-container"><div class="empty">Load data first</div></div>
       </div>
       <div class="panel">
@@ -893,15 +893,19 @@ function renderTopVideos() {
     const type = getVideoType(v);
     const typeLabel = type === 'short' ? 'Short' : type === 'clip' ? 'Clip' : 'Episode';
     const typeCls = type === 'short' ? 'type-short' : type === 'clip' ? 'type-clip' : 'type-episode';
+    const date = new Date(v.publishedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     html += `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--muted);min-width:24px">${i+1}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.title}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-          <div style="flex:1;height:3px;background:var(--surface2);border-radius:2px"><div style="width:${pct}%;height:100%;background:var(--accent);border-radius:2px"></div></div>
-          <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2)">${fmtNum(v.views)}</span>
+        <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;text-decoration:none;transition:color 0.15s" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text)'">${v.title}</a>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${date}</span>
           <span class="type-badge ${typeCls}" style="font-size:9px">${typeLabel}</span>
         </div>
+        <div style="flex:1;height:3px;background:var(--surface2);border-radius:2px;margin-top:6px"><div style="width:${pct}%;height:100%;background:var(--accent);border-radius:2px"></div></div>
+      </div>
+      <div style="text-align:right;min-width:44px">
+        <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2)">${fmtNum(v.views)}</span>
       </div>
     </div>`;
   });
@@ -1037,56 +1041,89 @@ function renderMonthlyChart() {
 }
 
 function renderHeatmap() {
-  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-  const dayViews = Array(7).fill(0);
-  const dayCounts = Array(7).fill(0);
-  const dayVideos = Array.from({length:7}, ()=>[]);
+  const shorts = allVideos.filter(isShort);
+  const clips = allVideos.filter(isClip);
+  const episodes = allVideos.filter(v => getVideoType(v) === 'episode');
 
-  allVideos.forEach(v => {
-    let d = new Date(v.publishedAt).getDay();
-    d = d === 0 ? 6 : d - 1; // Mon=0 ... Sun=6
-    dayViews[d] += v.views;
-    dayCounts[d]++;
-    dayVideos[d].push(v);
-  });
+  const engagementRate = (arr) => {
+    if (!arr.length) return 0;
+    const total = arr.reduce((a, v) => a + v.views, 0);
+    const eng = arr.reduce((a, v) => a + v.likes + v.comments, 0);
+    return total ? ((eng / total) * 100) : 0;
+  };
 
-  const dayAvgs = dayViews.map((v,i) => dayCounts[i] ? Math.round(v/dayCounts[i]) : 0);
-  const maxAvg = Math.max(...dayAvgs) || 1;
-  const bestIdx = dayAvgs.indexOf(maxAvg);
+  const types = [
+    { label: 'YouTube Shorts', color: 'var(--purple)', bg: 'rgba(155,109,255,0.1)', border: 'rgba(155,109,255,0.3)', videos: shorts },
+    { label: 'Clips', color: 'var(--accent)', bg: 'rgba(255,60,60,0.1)', border: 'rgba(255,60,60,0.3)', videos: clips },
+    { label: 'Full Episodes', color: 'var(--blue)', bg: 'rgba(74,158,255,0.1)', border: 'rgba(74,158,255,0.3)', videos: episodes },
+  ].filter(t => t.videos.length > 0);
 
-  let html = `<div style="display:flex;flex-direction:column;gap:10px">`;
+  const rates = types.map(t => engagementRate(t.videos));
+  const maxRate = Math.max(...rates) || 1;
+  const bestIdx = rates.indexOf(maxRate);
 
-  days.forEach((day, i) => {
-    const avg = dayAvgs[i];
-    const count = dayCounts[i];
-    const pct = Math.round((avg / maxAvg) * 100);
+  // Top 3 most engaging individual videos
+  const topEngaging = [...allVideos]
+    .filter(v => v.views > 100)
+    .map(v => ({ ...v, rate: v.views ? ((v.likes + v.comments) / v.views) * 100 : 0 }))
+    .sort((a, b) => b.rate - a.rate)
+    .slice(0, 5);
+
+  let html = `
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:12px">Engagement Rate by Type <span style="font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0">(likes + comments ÷ views)</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px">`;
+
+  types.forEach((t, i) => {
+    const rate = rates[i];
+    const pct = Math.round((rate / maxRate) * 100);
     const isBest = i === bestIdx;
-    const topVideo = dayVideos[i].sort((a,b)=>b.views-a.views)[0];
-    const barColor = isBest ? 'var(--green)' : avg > maxAvg * 0.6 ? 'var(--accent)' : 'var(--surface2)';
-    const barFill = isBest ? 'var(--green)' : avg > maxAvg * 0.6 ? 'rgba(255,60,60,0.7)' : 'rgba(255,255,255,0.15)';
-
-    html += `<div style="display:grid;grid-template-columns:90px 1fr 80px;align-items:center;gap:12px;padding:10px 12px;background:${isBest?'rgba(76,175,125,0.07)':'var(--surface2)'};border-radius:8px;border:1px solid ${isBest?'rgba(76,175,125,0.25)':'var(--border)'}">
-      <div>
-        <div style="font-size:13px;font-weight:500;color:${isBest?'var(--green)':'var(--text)'}">
-          ${isBest ? '★ ' : ''}${day}
+    const avgViews = t.videos.length ? Math.round(t.videos.reduce((a,v)=>a+v.views,0)/t.videos.length) : 0;
+    const avgLikes = t.videos.length ? Math.round(t.videos.reduce((a,v)=>a+v.likes,0)/t.videos.length) : 0;
+    html += `
+      <div style="padding:14px 16px;background:${isBest ? t.bg : 'var(--surface2)'};border:1px solid ${isBest ? t.border : 'var(--border)'};border-radius:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:500;color:${t.color}">${isBest ? '★ ' : ''}${t.label} ${isBest ? '<span style="font-size:10px;background:'+t.border+';padding:2px 6px;border-radius:3px;margin-left:4px">Most Viral</span>' : ''}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:${t.color}">${rate.toFixed(2)}%</div>
         </div>
-        <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${count} video${count!==1?'s':''}</div>
-      </div>
-      <div>
-        <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:6px">
-          <div style="width:${pct}%;height:100%;background:${barFill};border-radius:4px;transition:width 0.5s"></div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:10px">
+          <div style="width:${pct}%;height:100%;background:${t.color};border-radius:3px;transition:width 0.6s;opacity:0.8"></div>
         </div>
-        ${topVideo ? `<div style="font-size:11px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Top: "${topVideo.title.slice(0,45)}${topVideo.title.length>45?'...':''}"</div>` : '<div style="font-size:11px;color:var(--muted)">No videos posted</div>'}
-      </div>
-      <div style="text-align:right">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${isBest?'var(--green)':'var(--text)'}">${avg ? fmtNum(avg) : '—'}</div>
-        <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">avg views</div>
-      </div>
-    </div>`;
+        <div style="display:flex;gap:20px;font-size:11px;color:var(--muted2);font-family:'DM Mono',monospace">
+          <span>${t.videos.length} videos</span>
+          <span>avg ${fmtNum(avgViews)} views</span>
+          <span>avg ${fmtNum(avgLikes)} likes</span>
+        </div>
+      </div>`;
   });
 
-  html += `</div>`;
-  html += `<p style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:12px">Based on publish date of ${allVideos.length} videos. Hour-level data requires YouTube Analytics API.</p>`;
+  html += `</div></div>
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:12px">Top 5 Most Engaging Videos</div>
+      <div style="display:flex;flex-direction:column;gap:0">`;
+
+  topEngaging.forEach((v, i) => {
+    const type = getVideoType(v);
+    const typeCls = type === 'short' ? 'type-short' : type === 'clip' ? 'type-clip' : 'type-episode';
+    const typeLabel = type === 'short' ? 'Short' : type === 'clip' ? 'Clip' : 'Episode';
+    html += `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--muted);min-width:20px">${i+1}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.title}</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:2px;font-family:'DM Mono',monospace">${fmtNum(v.views)} views · ${fmtNum(v.likes)} likes · ${fmtNum(v.comments)} comments</div>
+        </div>
+        <div style="text-align:right;min-width:60px">
+          <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--green)">${v.rate.toFixed(2)}%</div>
+          <span class="type-badge ${typeCls}" style="font-size:9px">${typeLabel}</span>
+        </div>
+      </div>`;
+  });
+
+  html += `</div>
+      <p style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:12px">High engagement rate = YouTube's algorithm pushes the video harder. These are your best candidates to repurpose for TikTok, Reels, and Twitter.</p>
+    </div>`;
+
   document.getElementById('heatmap-container').innerHTML = html;
 }
 

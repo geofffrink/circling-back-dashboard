@@ -518,8 +518,8 @@
 
     <div class="grid-2 section-gap">
       <div class="panel">
-        <div class="panel-title">Top 5 Videos</div>
-        <div id="top-videos-list"></div>
+        <div class="panel-title">Top 20 Videos</div>
+        <div id="top-videos-list" style="max-height:520px;overflow-y:auto;padding-right:4px"></div>
       </div>
       <div class="panel">
         <div class="panel-title">Auto-Detected Insights</div>
@@ -885,7 +885,7 @@ function filterVideos(type, btn) {
 }
 
 function renderTopVideos() {
-  const top5 = [...allVideos].sort((a,b)=>b.views-a.views).slice(0,5);
+  const top5 = [...allVideos].sort((a,b)=>b.views-a.views).slice(0,20);
   const maxV = top5[0]?.views || 1;
   let html = '';
   top5.forEach((v,i) => {

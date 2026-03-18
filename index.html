@@ -241,6 +241,7 @@
   }
   .type-clip { background: rgba(255,60,60,0.15); color: var(--accent); }
   .type-episode { background: rgba(74,158,255,0.15); color: var(--blue); }
+  .type-short { background: rgba(155,109,255,0.15); color: var(--purple); }
   .metric-num {
     font-family: 'DM Mono', monospace;
     font-size: 13px;
@@ -531,6 +532,7 @@
   <div class="tab-content" id="tab-videos">
     <div class="filter-bar">
       <button class="filter-btn active" onclick="filterVideos('all', this)">All</button>
+      <button class="filter-btn" onclick="filterVideos('short', this)">Shorts Only</button>
       <button class="filter-btn" onclick="filterVideos('clip', this)">Clips Only</button>
       <button class="filter-btn" onclick="filterVideos('episode', this)">Episodes Only</button>
       <span style="margin-left:auto;color:var(--muted);font-size:12px;font-family:'DM Mono',monospace;" id="video-count-label">0 videos</span>
@@ -630,10 +632,24 @@ function fmtNum(n) {
   return n?.toString() || '0';
 }
 
+function isShort(video) {
+  const title = (video.title || '').toLowerCase();
+  const desc = (video.description || '').toLowerCase();
+  const dur = video.duration || 0;
+  return dur <= 60 || title.includes('#shorts') || title.includes('#short') || desc.includes('#shorts');
+}
+
 function isClip(video) {
+  if(isShort(video)) return false;
   const title = (video.title || '').toLowerCase();
   const dur = video.duration || 0;
-  return dur < 600 || title.includes('clip') || title.includes('#short') || title.includes('moment') || title.includes('reacts') || dur < 300;
+  return dur < 600 || title.includes('clip') || title.includes('moment') || title.includes('reacts');
+}
+
+function getVideoType(video) {
+  if(isShort(video)) return 'short';
+  if(isClip(video)) return 'clip';
+  return 'episode';
 }
 
 function scoreVideo(v, maxViews) {
@@ -742,9 +758,10 @@ function renderStats() {
   document.getElementById('stat-top').textContent = top ? fmtNum(top.views) : '—';
   document.getElementById('stat-top-sub').textContent = top ? top.title.slice(0,30)+'...' : '—';
 
+  const shorts = allVideos.filter(isShort);
   const clips = allVideos.filter(isClip);
-  const episodes = allVideos.filter(v => !isClip(v));
-  document.getElementById('chart-badge').textContent = `${clips.length} clips · ${episodes.length} episodes`;
+  const episodes = allVideos.filter(v => getVideoType(v)==='episode');
+  document.getElementById('chart-badge').textContent = `${shorts.length} shorts · ${clips.length} clips · ${episodes.length} episodes`;
 }
 
 function renderCharts() {
@@ -784,11 +801,14 @@ function renderCharts() {
     }
   });
 
-  // Clips vs Episodes
+  // Shorts vs Clips vs Episodes
+  const shorts = allVideos.filter(isShort);
   const clips = allVideos.filter(isClip);
-  const episodes = allVideos.filter(v=>!isClip(v));
+  const episodes = allVideos.filter(v=>getVideoType(v)==='episode');
+  const shortViews = shorts.reduce((a,v)=>a+v.views,0);
   const clipViews = clips.reduce((a,v)=>a+v.views,0);
   const epViews = episodes.reduce((a,v)=>a+v.views,0);
+  const shortAvg = shorts.length ? Math.round(shortViews/shorts.length) : 0;
   const clipAvg = clips.length ? Math.round(clipViews/clips.length) : 0;
   const epAvg = episodes.length ? Math.round(epViews/episodes.length) : 0;
 
@@ -799,6 +819,7 @@ function renderCharts() {
     data:{
       labels:['Total Views','Avg Views/Video'],
       datasets:[
+        {label:'Shorts',data:[shortViews,shortAvg],backgroundColor:'rgba(155,109,255,0.7)',borderRadius:4},
         {label:'Clips',data:[clipViews,clipAvg],backgroundColor:'rgba(255,60,60,0.7)',borderRadius:4},
         {label:'Episodes',data:[epViews,epAvg],backgroundColor:'rgba(74,158,255,0.7)',borderRadius:4}
       ]
@@ -816,8 +837,9 @@ function renderCharts() {
 
 function renderVideoTable(filter) {
   filter = filter || currentFilter;
-  let vids = filter === 'clip' ? allVideos.filter(isClip) :
-             filter === 'episode' ? allVideos.filter(v=>!isClip(v)) : allVideos;
+  let vids = filter === 'short' ? allVideos.filter(isShort) :
+             filter === 'clip' ? allVideos.filter(isClip) :
+             filter === 'episode' ? allVideos.filter(v=>getVideoType(v)==='episode') : allVideos;
   document.getElementById('video-count-label').textContent = `${vids.length} videos`;
   const maxViews = Math.max(...allVideos.map(v=>v.views));
 
@@ -833,16 +855,18 @@ function renderVideoTable(filter) {
     </tr></thead><tbody>`;
 
   vids.forEach(v => {
-    const clip = isClip(v);
+    const type = getVideoType(v);
     const date = new Date(v.publishedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     const barW = Math.round((v.views/maxViews)*100);
     const score = scoreVideo(v, maxViews);
     const scoreCls = score==='high'?'score-high':score==='med'?'score-med':'score-low';
     const scoreLabel = score==='high'?'★ Top':score==='med'?'◆ Mid':'▼ Low';
+    const typeLabel = type === 'short' ? 'Short' : type === 'clip' ? 'Clip' : 'Episode';
+    const typeCls = type === 'short' ? 'type-short' : type === 'clip' ? 'type-clip' : 'type-episode';
     html += `<tr>
       <td><img class="video-thumb" src="${v.thumbnail}" loading="lazy" onerror="this.style.background='#1a1a1a'"></td>
       <td class="video-title-cell"><div class="video-title">${v.title}</div></td>
-      <td><span class="type-badge ${clip?'type-clip':'type-episode'}">${clip?'Clip':'Episode'}</span></td>
+      <td><span class="type-badge ${typeCls}">${typeLabel}</span></td>
       <td><span class="video-date">${date}</span></td>
       <td><span class="metric-num">${fmtNum(v.views)}</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:${barW}%"></div></div></td>
       <td><span class="metric-num">${fmtNum(v.likes)}</span></td>
@@ -866,7 +890,9 @@ function renderTopVideos() {
   let html = '';
   top5.forEach((v,i) => {
     const pct = Math.round((v.views/maxV)*100);
-    const clip = isClip(v);
+    const type = getVideoType(v);
+    const typeLabel = type === 'short' ? 'Short' : type === 'clip' ? 'Clip' : 'Episode';
+    const typeCls = type === 'short' ? 'type-short' : type === 'clip' ? 'type-clip' : 'type-episode';
     html += `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--muted);min-width:24px">${i+1}</div>
       <div style="flex:1;min-width:0">
@@ -874,7 +900,7 @@ function renderTopVideos() {
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
           <div style="flex:1;height:3px;background:var(--surface2);border-radius:2px"><div style="width:${pct}%;height:100%;background:var(--accent);border-radius:2px"></div></div>
           <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2)">${fmtNum(v.views)}</span>
-          <span class="type-badge ${clip?'type-clip':'type-episode'}" style="font-size:9px">${clip?'Clip':'Episode'}</span>
+          <span class="type-badge ${typeCls}" style="font-size:9px">${typeLabel}</span>
         </div>
       </div>
     </div>`;
@@ -883,10 +909,15 @@ function renderTopVideos() {
 }
 
 function renderInsights() {
+  const shorts = allVideos.filter(isShort);
   const clips = allVideos.filter(isClip);
-  const episodes = allVideos.filter(v=>!isClip(v));
+  const episodes = allVideos.filter(v=>getVideoType(v)==='episode');
+  const shortAvg = shorts.length ? Math.round(shorts.reduce((a,v)=>a+v.views,0)/shorts.length) : 0;
   const clipAvg = clips.length ? Math.round(clips.reduce((a,v)=>a+v.views,0)/clips.length) : 0;
   const epAvg = episodes.length ? Math.round(episodes.reduce((a,v)=>a+v.views,0)/episodes.length) : 0;
+
+  const typeAvgs = [{name:'Shorts',avg:shortAvg,count:shorts.length},{name:'Clips',avg:clipAvg,count:clips.length},{name:'Episodes',avg:epAvg,count:episodes.length}];
+  const best = typeAvgs.filter(t=>t.count>0).sort((a,b)=>b.avg-a.avg)[0];
 
   // Day of week analysis
   const dayViews = Array(7).fill(0);
@@ -909,15 +940,25 @@ function renderInsights() {
   const topWord = Object.entries(words).sort((a,b)=>b[1]-a[1])[0];
 
   let html = '';
-  if(clipAvg > epAvg) {
-    html += `<div class="insight-card green"><div class="insight-type">✓ Clips Outperform</div><div class="insight-text">Your clips average <strong>${fmtNum(clipAvg)}</strong> views vs <strong>${fmtNum(epAvg)}</strong> for full episodes. Short-form content is your strongest growth lever right now.</div></div>`;
+
+  // Best content type
+  if(best) {
+    html += `<div class="insight-card green"><div class="insight-type">✓ ${best.name} Lead Performance</div><div class="insight-text">${best.name} average <strong>${fmtNum(best.avg)}</strong> views per video — your strongest content type. ${best.name==='Shorts'?'The algorithm is boosting your vertical content.':best.name==='Clips'?'Short-form clips are your growth lever.':'Your audience prefers long-form content.'}</div></div>`;
+  }
+
+  // Shorts-specific insight
+  if(shorts.length > 0) {
+    html += `<div class="insight-card purple"><div class="insight-type">▶ Shorts Performance</div><div class="insight-text">You have <strong>${shorts.length} Shorts</strong> averaging <strong>${fmtNum(shortAvg)}</strong> views. ${shortAvg > epAvg ? 'Shorts are outperforming full episodes — lean in.' : 'Shorts have viral upside the data hasn\'t unlocked yet. Title hooks are key.'}</div></div>`;
   } else {
-    html += `<div class="insight-card"><div class="insight-type">📊 Episodes Lead</div><div class="insight-text">Full episodes average <strong>${fmtNum(epAvg)}</strong> views vs <strong>${fmtNum(clipAvg)}</strong> for clips. Your audience prefers long-form — clips may need stronger hooks.</div></div>`;
+    html += `<div class="insight-card purple"><div class="insight-type">⚡ Shorts Opportunity</div><div class="insight-text">No YouTube Shorts detected in your last ${allVideos.length} videos. Shorts (≤60s, vertical) have a separate viral feed on YouTube and could dramatically increase discovery.</div></div>`;
   }
+
   html += `<div class="insight-card gold"><div class="insight-type">📅 Best Posting Day</div><div class="insight-text">Videos posted on <strong>${bestDay}</strong> tend to get the most views on average. Try to schedule your best clips for this day.</div></div>`;
+
   if(topWord) {
-    html += `<div class="insight-card purple"><div class="insight-type">🔤 High-Value Title Word</div><div class="insight-text">The word "<strong>${topWord[0]}</strong>" appears in your highest-viewed content. Consider making it part of your clip title formula.</div></div>`;
+    html += `<div class="insight-card"><div class="insight-type">🔤 High-Value Title Word</div><div class="insight-text">The word "<strong>${topWord[0]}</strong>" appears in your highest-viewed content. Consider making it part of your clip title formula.</div></div>`;
   }
+
   const recent10 = allVideos.slice(0,10);
   const older = allVideos.slice(10,30);
   const r10avg = recent10.length ? Math.round(recent10.reduce((a,v)=>a+v.views,0)/recent10.length) : 0;
@@ -1081,6 +1122,12 @@ function renderPatterns() {
 
   const avgDescLen = (arr) => arr.length ? Math.round(arr.reduce((a,v)=>a+v.description.length,0)/arr.length) : 0;
   const avgTitleLen = (arr) => arr.length ? Math.round(arr.reduce((a,v)=>a+v.title.length,0)/arr.length) : 0;
+  const typeBreakdown = (arr) => {
+    const s = arr.filter(isShort).length;
+    const c = arr.filter(isClip).length;
+    const e = arr.filter(v=>getVideoType(v)==='episode').length;
+    return `${s} shorts · ${c} clips · ${e} episodes`;
+  };
 
   let html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
     <div>
@@ -1088,7 +1135,7 @@ function renderPatterns() {
       <div style="font-size:13px;color:var(--text);line-height:2">
         <div>Avg title length: <strong>${avgTitleLen(top10)} chars</strong></div>
         <div>Avg description length: <strong>${avgDescLen(top10)} chars</strong></div>
-        <div>Clips in top 20%: <strong>${top10.filter(isClip).length}/${top10.length}</strong></div>
+        <div>Content mix: <strong>${typeBreakdown(top10)}</strong></div>
         <div>Most common day: <strong>${getMostCommonDay(top10)}</strong></div>
       </div>
     </div>
@@ -1097,7 +1144,7 @@ function renderPatterns() {
       <div style="font-size:13px;color:var(--text);line-height:2">
         <div>Avg title length: <strong>${avgTitleLen(bot10)} chars</strong></div>
         <div>Avg description length: <strong>${avgDescLen(bot10)} chars</strong></div>
-        <div>Clips in bottom 20%: <strong>${bot10.filter(isClip).length}/${bot10.length}</strong></div>
+        <div>Content mix: <strong>${typeBreakdown(bot10)}</strong></div>
         <div>Most common day: <strong>${getMostCommonDay(bot10)}</strong></div>
       </div>
     </div>
@@ -1113,10 +1160,13 @@ function getMostCommonDay(videos) {
 }
 
 function renderAiSnapshot() {
+  const shorts = allVideos.filter(isShort);
   const clips = allVideos.filter(isClip);
-  const episodes = allVideos.filter(v=>!isClip(v));
+  const episodes = allVideos.filter(v=>getVideoType(v)==='episode');
   const sorted = [...allVideos].sort((a,b)=>b.views-a.views);
-  const top3 = sorted.slice(0,3).map(v=>`• "${v.title.slice(0,50)}" — ${fmtNum(v.views)} views`).join('\n');
+  const shortAvg = shorts.length ? Math.round(shorts.reduce((a,v)=>a+v.views,0)/shorts.length) : 0;
+  const clipAvg = clips.length ? Math.round(clips.reduce((a,v)=>a+v.views,0)/clips.length) : 0;
+  const epAvg = episodes.length ? Math.round(episodes.reduce((a,v)=>a+v.views,0)/episodes.length) : 0;
 
   const html = `<div style="line-height:2;font-size:13px;color:var(--text)">
     <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
@@ -1124,12 +1174,26 @@ function renderAiSnapshot() {
       <div>Circling Back Podcast</div>
     </div>
     <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px">Content Mix</div>
-      <div>${clips.length} clips · ${episodes.length} episodes</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px">Content Mix</div>
+      <div style="display:flex;gap:10px">
+        <span style="color:var(--purple)">${shorts.length} Shorts</span>
+        <span style="color:var(--accent)">${clips.length} Clips</span>
+        <span style="color:var(--blue)">${episodes.length} Episodes</span>
+      </div>
+    </div>
+    <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px">Avg Views by Type</div>
+      ${shorts.length ? `<div style="font-size:12px;color:var(--muted2);margin-bottom:2px">Shorts: <span style="color:var(--purple)">${fmtNum(shortAvg)}</span></div>` : ''}
+      <div style="font-size:12px;color:var(--muted2);margin-bottom:2px">Clips: <span style="color:var(--accent)">${fmtNum(clipAvg)}</span></div>
+      <div style="font-size:12px;color:var(--muted2)">Episodes: <span style="color:var(--blue)">${fmtNum(epAvg)}</span></div>
     </div>
     <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px">Top Performers</div>
-      ${sorted.slice(0,3).map(v=>`<div style="font-size:12px;color:var(--muted2);margin-bottom:4px">"${v.title.slice(0,45)}..." · <span style="color:var(--green)">${fmtNum(v.views)}</span></div>`).join('')}
+      ${sorted.slice(0,3).map(v=>{
+        const t = getVideoType(v);
+        const c = t==='short'?'var(--purple)':t==='clip'?'var(--accent)':'var(--blue)';
+        return `<div style="font-size:12px;color:var(--muted2);margin-bottom:4px">"${v.title.slice(0,40)}..." · <span style="color:var(--green)">${fmtNum(v.views)}</span> <span style="color:${c};font-size:10px">[${t}]</span></div>`;
+      }).join('')}
     </div>
     <div>
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px">Total Views (loaded)</div>
@@ -1141,22 +1205,28 @@ function renderAiSnapshot() {
 
 function buildChannelContext() {
   if(!allVideos.length) return 'No data loaded yet.';
+  const shorts = allVideos.filter(isShort);
   const clips = allVideos.filter(isClip);
-  const episodes = allVideos.filter(v=>!isClip(v));
+  const episodes = allVideos.filter(v=>getVideoType(v)==='episode');
   const sorted = [...allVideos].sort((a,b)=>b.views-a.views);
-  const top10 = sorted.slice(0,10).map(v=>`"${v.title}" (${fmtNum(v.views)} views, ${isClip(v)?'clip':'episode'}, ${new Date(v.publishedAt).toDateString()})`).join('\n');
-  const bot5 = sorted.slice(-5).map(v=>`"${v.title}" (${fmtNum(v.views)} views)`).join('\n');
-  const totalViews = allVideos.reduce((a,v)=>a+v.views,0);
+  const shortAvg = shorts.length ? Math.round(shorts.reduce((a,v)=>a+v.views,0)/shorts.length) : 0;
   const clipAvg = clips.length ? Math.round(clips.reduce((a,v)=>a+v.views,0)/clips.length) : 0;
   const epAvg = episodes.length ? Math.round(episodes.reduce((a,v)=>a+v.views,0)/episodes.length) : 0;
+  const top10 = sorted.slice(0,10).map(v=>`"${v.title}" (${fmtNum(v.views)} views, ${getVideoType(v)}, published ${new Date(v.publishedAt).toDateString()})`).join('\n');
+  const bot5 = sorted.slice(-5).map(v=>`"${v.title}" (${fmtNum(v.views)} views, ${getVideoType(v)})`).join('\n');
+  const totalViews = allVideos.reduce((a,v)=>a+v.views,0);
 
-  return `You are a social media strategist for "Circling Back", a podcast on YouTube that also publishes short clips. Here is their real YouTube data:
+  return `You are a social media strategist for "Circling Back", a podcast on YouTube (part of Washed Media). They want to grow through viral short-form content — clips shared on Twitter, YouTube Shorts, Instagram Reels, and TikTok. Here is their real YouTube data:
 
 CHANNEL: Circling Back (Washed Media)
-TOTAL VIDEOS ANALYZED: ${allVideos.length} (${clips.length} clips, ${episodes.length} full episodes)
+TOTAL VIDEOS ANALYZED: ${allVideos.length}
+CONTENT MIX: ${shorts.length} YouTube Shorts (≤60s) · ${clips.length} Clips (1-10min) · ${episodes.length} Full Episodes
 TOTAL VIEWS: ${fmtNum(totalViews)}
-CLIP AVG VIEWS: ${fmtNum(clipAvg)}
-EPISODE AVG VIEWS: ${fmtNum(epAvg)}
+
+AVERAGE VIEWS BY TYPE:
+- YouTube Shorts: ${fmtNum(shortAvg)} avg views (${shorts.length} videos)
+- Clips: ${fmtNum(clipAvg)} avg views (${clips.length} videos)
+- Full Episodes: ${fmtNum(epAvg)} avg views (${episodes.length} videos)
 
 TOP 10 VIDEOS:
 ${top10}
@@ -1165,9 +1235,9 @@ LOWEST PERFORMERS:
 ${bot5}
 
 RECENT TITLES (last 10):
-${allVideos.slice(0,10).map(v=>`"${v.title}"`).join('\n')}
+${allVideos.slice(0,10).map(v=>`"${v.title}" [${getVideoType(v)}]`).join('\n')}
 
-Based on this real data, answer the user's question with specific, actionable advice. Reference actual video titles and numbers where relevant. Be direct and opinionated — you are a strategist, not a generic assistant. Keep responses concise and punchy.`;
+Based on this real data, answer the user's question with specific, actionable advice. Reference actual video titles and numbers where relevant. Be direct and opinionated — you are a strategist, not a generic assistant. Focus on viral growth strategy for short-form content. Keep responses concise and punchy.`;
 }
 
 async function runPrompt(promptText) {

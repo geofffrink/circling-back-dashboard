@@ -1037,44 +1037,56 @@ function renderMonthlyChart() {
 }
 
 function renderHeatmap() {
-  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  // Simulate heatmap from day-of-week data (YouTube API doesn't give hour data without Analytics API)
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const dayViews = Array(7).fill(0);
   const dayCounts = Array(7).fill(0);
+  const dayVideos = Array.from({length:7}, ()=>[]);
+
   allVideos.forEach(v => {
     let d = new Date(v.publishedAt).getDay();
-    d = d === 0 ? 6 : d-1; // Mon=0
+    d = d === 0 ? 6 : d - 1; // Mon=0 ... Sun=6
     dayViews[d] += v.views;
     dayCounts[d]++;
-  });
-  const dayAvgs = dayViews.map((v,i)=>dayCounts[i]?Math.round(v/dayCounts[i]):0);
-  const maxVal = Math.max(...dayAvgs);
-
-  let html = '<div class="heatmap-grid" style="margin-bottom:12px">';
-  // Header
-  html += '<div></div>';
-  ['Published','Videos','Avg Views','Performance','','',''].forEach(l => {
-    html += `<div class="heatmap-col-label">${l}</div>`;
+    dayVideos[d].push(v);
   });
 
-  days.forEach((day,i) => {
-    const intensity = maxVal ? dayAvgs[i]/maxVal : 0;
-    const r = Math.round(255*intensity);
+  const dayAvgs = dayViews.map((v,i) => dayCounts[i] ? Math.round(v/dayCounts[i]) : 0);
+  const maxAvg = Math.max(...dayAvgs) || 1;
+  const bestIdx = dayAvgs.indexOf(maxAvg);
+
+  let html = `<div style="display:flex;flex-direction:column;gap:10px">`;
+
+  days.forEach((day, i) => {
+    const avg = dayAvgs[i];
     const count = dayCounts[i];
-    html += `<div class="heatmap-day-label">${day}</div>`;
-    html += `<div class="heatmap-col-label" style="display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text)">${day}</div>`;
-    html += `<div class="heatmap-col-label" style="display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted2)">${count}</div>`;
-    html += `<div class="heatmap-col-label" style="display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text)">${fmtNum(dayAvgs[i])}</div>`;
-    const barW = Math.round(intensity*100);
-    html += `<div style="grid-column:span 3;display:flex;align-items:center;gap:6px;padding:2px 0">
-      <div style="flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden">
-        <div style="width:${barW}%;height:100%;background:rgba(${r},${60+Math.round(intensity*40)},${60},0.8);border-radius:4px;transition:width 0.5s"></div>
+    const pct = Math.round((avg / maxAvg) * 100);
+    const isBest = i === bestIdx;
+    const topVideo = dayVideos[i].sort((a,b)=>b.views-a.views)[0];
+    const barColor = isBest ? 'var(--green)' : avg > maxAvg * 0.6 ? 'var(--accent)' : 'var(--surface2)';
+    const barFill = isBest ? 'var(--green)' : avg > maxAvg * 0.6 ? 'rgba(255,60,60,0.7)' : 'rgba(255,255,255,0.15)';
+
+    html += `<div style="display:grid;grid-template-columns:90px 1fr 80px;align-items:center;gap:12px;padding:10px 12px;background:${isBest?'rgba(76,175,125,0.07)':'var(--surface2)'};border-radius:8px;border:1px solid ${isBest?'rgba(76,175,125,0.25)':'var(--border)'}">
+      <div>
+        <div style="font-size:13px;font-weight:500;color:${isBest?'var(--green)':'var(--text)'}">
+          ${isBest ? '★ ' : ''}${day}
+        </div>
+        <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${count} video${count!==1?'s':''}</div>
       </div>
-      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted2);min-width:28px">${Math.round(intensity*100)}%</span>
+      <div>
+        <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:6px">
+          <div style="width:${pct}%;height:100%;background:${barFill};border-radius:4px;transition:width 0.5s"></div>
+        </div>
+        ${topVideo ? `<div style="font-size:11px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Top: "${topVideo.title.slice(0,45)}${topVideo.title.length>45?'...':''}"</div>` : '<div style="font-size:11px;color:var(--muted)">No videos posted</div>'}
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${isBest?'var(--green)':'var(--text)'}">${avg ? fmtNum(avg) : '—'}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">avg views</div>
+      </div>
     </div>`;
   });
-  html += '</div>';
-  html += `<p style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Note: YouTube Data API v3 does not provide hour-level posting data without the Analytics API. Shown above is performance by day of week based on publish date.</p>`;
+
+  html += `</div>`;
+  html += `<p style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:12px">Based on publish date of ${allVideos.length} videos. Hour-level data requires YouTube Analytics API.</p>`;
   document.getElementById('heatmap-container').innerHTML = html;
 }
 

@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circling Back — Social Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --accent: #ff3c3c;
+    --accent2: #ff7043;
+    --gold: #f5c518;
+    --text: #f0ede8;
+    --muted: #6b6b6b;
+    --muted2: #999;
+    --green: #4caf7d;
+    --blue: #4a9eff;
+    --purple: #9b6dff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+  .header-meta {
+    font-size: 12px;
+    color: var(--muted2);
+    font-family: 'DM Mono', monospace;
+  }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--surface2); border-color: var(--accent); }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #e02a2a; border-color: #e02a2a; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* LAYOUT */
+  .main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+  .tab {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted2);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* STAT CARDS */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .stat-card:hover::before { opacity: 1; }
+  .stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 38px;
+    line-height: 1;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .stat-sub {
+    font-size: 12px;
+    color: var(--muted2);
+  }
+  .stat-delta {
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .stat-delta.up { color: var(--green); }
+  .stat-delta.down { color: var(--accent); }
+
+  /* GRID LAYOUTS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-60-40 { display: grid; grid-template-columns: 60fr 40fr; gap: 20px; margin-bottom: 20px; }
+  .grid-40-60 { display: grid; grid-template-columns: 40fr 60fr; gap: 20px; margin-bottom: 20px; }
+
+  /* PANEL */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px;
+  }
+  .panel-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-title .badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: var(--muted2);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  /* VIDEO TABLE */
+  .video-table { width: 100%; border-collapse: collapse; }
+  .video-table th {
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    padding: 0 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+  .video-table td {
+    padding: 12px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .video-table tr:last-child td { border-bottom: none; }
+  .video-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .video-title-cell { max-width: 320px; }
+  .video-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.4;
+    margin-bottom: 3px;
+  }
+  .video-date { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .video-thumb {
+    width: 72px;
+    height: 42px;
+    border-radius: 4px;
+    object-fit: cover;
+    background: var(--surface2);
+  }
+  .type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .type-clip { background: rgba(255,60,60,0.15); color: var(--accent); }
+  .type-episode { background: rgba(74,158,255,0.15); color: var(--blue); }
+  .metric-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .metric-bar-wrap { width: 80px; height: 4px; background: var(--surface2); border-radius: 2px; margin-top: 4px; }
+  .metric-bar { height: 100%; border-radius: 2px; background: var(--accent); }
+
+  /* INSIGHT CARDS */
+  .insight-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border-left: 3px solid var(--accent);
+  }
+  .insight-card.green { border-left-color: var(--green); }
+  .insight-card.gold { border-left-color: var(--gold); }
+  .insight-card.purple { border-left-color: var(--purple); }
+  .insight-type {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 6px;
+  }
+  .insight-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  /* AI STRATEGY PANEL */
+  .ai-response {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+    min-height: 120px;
+  }
+  .ai-response.loading { color: var(--muted2); }
+
+  /* LOADING */
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--muted2);
+    gap: 16px;
+  }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* CHART */
+  .chart-wrap { position: relative; height: 200px; }
+  .chart-wrap-tall { position: relative; height: 260px; }
+
+  /* HEATMAP */
+  .heatmap-grid {
+    display: grid;
+    grid-template-columns: 48px repeat(7, 1fr);
+    gap: 3px;
+    font-size: 10px;
+  }
+  .heatmap-day-label {
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 6px;
+    font-size: 10px;
+  }
+  .heatmap-col-label {
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    text-align: center;
+    padding-bottom: 4px;
+    font-size: 10px;
+  }
+  .heatmap-cell {
+    height: 28px;
+    border-radius: 3px;
+    background: var(--surface2);
+    position: relative;
+    cursor: default;
+    transition: transform 0.1s;
+  }
+  .heatmap-cell:hover { transform: scale(1.1); }
+
+  /* TITLE FORMULA */
+  .formula-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .formula-row:last-child { border-bottom: none; }
+  .formula-rank {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--muted);
+    min-width: 28px;
+  }
+  .formula-tag {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--blue);
+  }
+  .formula-example { color: var(--muted2); font-size: 12px; flex: 1; }
+  .formula-score { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--green); }
+
+  /* TABS CONTENT */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* FILTER BAR */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    align-items: center;
+  }
+  .filter-btn {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted2);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .filter-btn:hover { color: var(--text); border-color: var(--text); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* STATUS */
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* PROMPT INPUT */
+  .prompt-area {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .prompt-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+  }
+  .prompt-input:focus { border-color: var(--accent); }
+  .prompt-input::placeholder { color: var(--muted); }
+
+  /* QUICK PROMPTS */
+  .quick-prompts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .quick-prompt {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .quick-prompt:hover { border-color: var(--accent); color: var(--accent); }
+
+  .section-gap { margin-bottom: 20px; }
+
+  /* Scrollable video table */
+  .table-scroll { overflow-x: auto; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+
+  /* Score bar */
+  .score-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+  }
+  .score-high { background: rgba(76,175,125,0.15); color: var(--green); }
+  .score-med { background: rgba(245,197,24,0.15); color: var(--gold); }
+  .score-low { background: rgba(255,60,60,0.15); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">CIRCLING<span>BACK</span> <span style="font-size:13px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:1px;font-weight:400;">/ SOCIAL INTEL</span></div>
+  <div class="header-meta"><span class="status-dot"></span>YouTube Data API v3 &nbsp;·&nbsp; <span id="last-updated">Not loaded</span></div>
+  <div class="header-actions">
+    <select id="period-select" class="btn" style="padding:7px 12px;">
+      <option value="50">Last 50 videos</option>
+      <option value="100">Last 100 videos</option>
+      <option value="25">Last 25 videos</option>
+    </select>
+    <button class="btn btn-primary" id="load-btn" onclick="loadData()">Load Data</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('overview')">Overview</div>
+    <div class="tab" onclick="switchTab('videos')">All Videos</div>
+    <div class="tab" onclick="switchTab('strategy')">Strategy</div>
+    <div class="tab" onclick="switchTab('ai')">AI Strategist</div>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="stat-grid" id="stat-grid">
+      <div class="stat-card"><div class="stat-label">Total Videos</div><div class="stat-value" id="stat-total">—</div><div class="stat-sub">In selected range</div></div>
+      <div class="stat-card"><div class="stat-label">Total Views</div><div class="stat-value" id="stat-views">—</div><div class="stat-sub">Across all content</div></div>
+      <div class="stat-card"><div class="stat-label">Avg Views / Video</div><div class="stat-value" id="stat-avg">—</div><div class="stat-sub">Episodes vs clips</div></div>
+      <div class="stat-card"><div class="stat-label">Top Performer</div><div class="stat-value" id="stat-top">—</div><div class="stat-sub" id="stat-top-sub">—</div></div>
+    </div>
+
+    <div class="grid-60-40 section-gap">
+      <div class="panel">
+        <div class="panel-title">Views Over Time <span class="badge" id="chart-badge">loading...</span></div>
+        <div class="chart-wrap"><canvas id="views-chart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Clips vs Episodes <span class="badge">performance split</span></div>
+        <div class="chart-wrap"><canvas id="type-chart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid-2 section-gap">
+      <div class="panel">
+        <div class="panel-title">Top 5 Videos</div>
+        <div id="top-videos-list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Auto-Detected Insights</div>
+        <div id="insights-list"><div class="empty">Load data to generate insights</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIDEOS TAB -->
+  <div class="tab-content" id="tab-videos">
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterVideos('all', this)">All</button>
+      <button class="filter-btn" onclick="filterVideos('clip', this)">Clips Only</button>
+      <button class="filter-btn" onclick="filterVideos('episode', this)">Episodes Only</button>
+      <span style="margin-left:auto;color:var(--muted);font-size:12px;font-family:'DM Mono',monospace;" id="video-count-label">0 videos</span>
+    </div>
+    <div class="panel table-scroll">
+      <div class="panel-title">All Videos</div>
+      <div id="video-table-container"><div class="empty">Load data to see all videos</div></div>
+    </div>
+  </div>
+
+  <!-- STRATEGY TAB -->
+  <div class="tab-content" id="tab-strategy">
+    <div class="grid-2 section-gap">
+      <div class="panel">
+        <div class="panel-title">Best Time to Post <span class="badge">based on pub. day patterns</span></div>
+        <div id="heatmap-container"><div class="empty">Load data first</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Title Formula Analysis</div>
+        <div id="title-formulas"><div class="empty">Load data first</div></div>
+      </div>
+    </div>
+    <div class="grid-2 section-gap">
+      <div class="panel">
+        <div class="panel-title">Views by Day of Week</div>
+        <div class="chart-wrap-tall"><canvas id="dow-chart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Views by Month</div>
+        <div class="chart-wrap-tall"><canvas id="monthly-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="panel section-gap">
+      <div class="panel-title">Description & Title Patterns That Win</div>
+      <div id="pattern-analysis"><div class="empty">Load data first</div></div>
+    </div>
+  </div>
+
+  <!-- AI STRATEGIST TAB -->
+  <div class="tab-content" id="tab-ai">
+    <div class="grid-60-40">
+      <div>
+        <div class="panel section-gap">
+          <div class="panel-title">Ask Your AI Strategist</div>
+          <div class="quick-prompts">
+            <button class="quick-prompt" onclick="runPrompt(this.textContent)">What content is performing best?</button>
+            <button class="quick-prompt" onclick="runPrompt(this.textContent)">Give me 5 viral clip title ideas</button>
+            <button class="quick-prompt" onclick="runPrompt(this.textContent)">What should we post this week?</button>
+            <button class="quick-prompt" onclick="runPrompt(this.textContent)">Why are some clips underperforming?</button>
+            <button class="quick-prompt" onclick="runPrompt(this.textContent)">Best posting time for max views?</button>
+            <button class="quick-prompt" onclick="runPrompt(this.textContent)">Write 3 description templates for clips</button>
+          </div>
+          <div class="prompt-area">
+            <input class="prompt-input" id="ai-prompt" placeholder="Ask anything about your content strategy..." onkeydown="if(event.key==='Enter')runPrompt()">
+            <button class="btn btn-primary" onclick="runPrompt()">Ask →</button>
+          </div>
+          <div class="ai-response loading" id="ai-response">Load your YouTube data first, then ask me anything about your content strategy. I'll analyze your real performance data to give you specific, actionable advice.</div>
+        </div>
+      </div>
+      <div>
+        <div class="panel section-gap">
+          <div class="panel-title">Channel Snapshot</div>
+          <div id="ai-snapshot"><div class="empty">Load data first</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_KEY = 'AIzaSyDNQH9_oQa2xEVxV_c44EukUAVZnCd_oXA';
+const CHANNEL_ID = 'UC6LMMZL-VGALwb-SpletPzg';
+const ANTHROPIC_KEY_PLACEHOLDER = ''; // Will use the proxy
+
+let allVideos = [];
+let videoDetails = [];
+let currentFilter = 'all';
+let viewsChart, typeChart, dowChart, monthlyChart;
+
+Chart.defaults.color = '#6b6b6b';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const tabs = ['overview','videos','strategy','ai'];
+  const idx = tabs.indexOf(tab);
+  document.querySelectorAll('.tab')[idx].classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+
+function fmtNum(n) {
+  if(n >= 1000000) return (n/1000000).toFixed(1)+'M';
+  if(n >= 1000) return (n/1000).toFixed(1)+'K';
+  return n?.toString() || '0';
+}
+
+function isClip(video) {
+  const title = (video.title || '').toLowerCase();
+  const dur = video.duration || 0;
+  return dur < 600 || title.includes('clip') || title.includes('#short') || title.includes('moment') || title.includes('reacts') || dur < 300;
+}
+
+function scoreVideo(v, maxViews) {
+  const ratio = v.views / maxViews;
+  if(ratio > 0.5) return 'high';
+  if(ratio > 0.2) return 'med';
+  return 'low';
+}
+
+async function loadData() {
+  const btn = document.getElementById('load-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+  document.getElementById('last-updated').textContent = 'Fetching...';
+
+  try {
+    const maxResults = parseInt(document.getElementById('period-select').value);
+
+    // Get uploads playlist
+    const channelRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails,statistics&id=${CHANNEL_ID}&key=${API_KEY}`);
+    const channelData = await channelRes.json();
+    if(!channelData.items?.length) throw new Error('Channel not found');
+    
+    const uploadsPlaylist = channelData.items[0].contentDetails.relatedPlaylists.uploads;
+
+    // Fetch video IDs
+    let videoIds = [];
+    let pageToken = '';
+    while(videoIds.length < maxResults) {
+      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylist}&maxResults=50&key=${API_KEY}${pageToken ? '&pageToken='+pageToken : ''}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      data.items?.forEach(item => {
+        if(item.snippet?.resourceId?.videoId) videoIds.push(item.snippet.resourceId.videoId);
+      });
+      if(!data.nextPageToken || videoIds.length >= maxResults) break;
+      pageToken = data.nextPageToken;
+    }
+    videoIds = videoIds.slice(0, maxResults);
+
+    // Fetch video details in batches of 50
+    videoDetails = [];
+    for(let i = 0; i < videoIds.length; i += 50) {
+      const batch = videoIds.slice(i, i+50).join(',');
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${batch}&key=${API_KEY}`);
+      const data = await res.json();
+      data.items?.forEach(item => {
+        const dur = parseDuration(item.contentDetails?.duration || '');
+        videoDetails.push({
+          id: item.id,
+          title: item.snippet?.title || '',
+          description: item.snippet?.description || '',
+          publishedAt: item.snippet?.publishedAt || '',
+          thumbnail: item.snippet?.thumbnails?.medium?.url || '',
+          views: parseInt(item.statistics?.viewCount || 0),
+          likes: parseInt(item.statistics?.likeCount || 0),
+          comments: parseInt(item.statistics?.commentCount || 0),
+          duration: dur,
+          tags: item.snippet?.tags || []
+        });
+      });
+    }
+
+    // Sort by date
+    videoDetails.sort((a,b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+    allVideos = videoDetails;
+
+    document.getElementById('last-updated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    btn.textContent = 'Refresh';
+    btn.disabled = false;
+
+    renderAll();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Retry';
+    document.getElementById('last-updated').textContent = 'Error: ' + e.message;
+    console.error(e);
+  }
+}
+
+function parseDuration(iso) {
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if(!m) return 0;
+  return (parseInt(m[1]||0)*3600) + (parseInt(m[2]||0)*60) + parseInt(m[3]||0);
+}
+
+function renderAll() {
+  renderStats();
+  renderCharts();
+  renderVideoTable();
+  renderTopVideos();
+  renderInsights();
+  renderStrategy();
+  renderAiSnapshot();
+}
+
+function renderStats() {
+  const total = allVideos.length;
+  const totalViews = allVideos.reduce((a,v) => a+v.views, 0);
+  const avg = total ? Math.round(totalViews/total) : 0;
+  const top = allVideos.slice().sort((a,b)=>b.views-a.views)[0];
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-views').textContent = fmtNum(totalViews);
+  document.getElementById('stat-avg').textContent = fmtNum(avg);
+  document.getElementById('stat-top').textContent = top ? fmtNum(top.views) : '—';
+  document.getElementById('stat-top-sub').textContent = top ? top.title.slice(0,30)+'...' : '—';
+
+  const clips = allVideos.filter(isClip);
+  const episodes = allVideos.filter(v => !isClip(v));
+  document.getElementById('chart-badge').textContent = `${clips.length} clips · ${episodes.length} episodes`;
+}
+
+function renderCharts() {
+  // Views over time
+  const sorted = [...allVideos].sort((a,b) => new Date(a.publishedAt)-new Date(b.publishedAt));
+  const labels = sorted.map(v => new Date(v.publishedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  const data = sorted.map(v => v.views);
+
+  if(viewsChart) viewsChart.destroy();
+  const ctx1 = document.getElementById('views-chart').getContext('2d');
+  const grad = ctx1.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0,'rgba(255,60,60,0.3)');
+  grad.addColorStop(1,'rgba(255,60,60,0)');
+  viewsChart = new Chart(ctx1, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:'Views',
+        data,
+        borderColor:'#ff3c3c',
+        backgroundColor:grad,
+        borderWidth:2,
+        pointRadius:2,
+        pointBackgroundColor:'#ff3c3c',
+        fill:true,
+        tension:0.4
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{display:false},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>fmtNum(v)}}
+      }
+    }
+  });
+
+  // Clips vs Episodes
+  const clips = allVideos.filter(isClip);
+  const episodes = allVideos.filter(v=>!isClip(v));
+  const clipViews = clips.reduce((a,v)=>a+v.views,0);
+  const epViews = episodes.reduce((a,v)=>a+v.views,0);
+  const clipAvg = clips.length ? Math.round(clipViews/clips.length) : 0;
+  const epAvg = episodes.length ? Math.round(epViews/episodes.length) : 0;
+
+  if(typeChart) typeChart.destroy();
+  const ctx2 = document.getElementById('type-chart').getContext('2d');
+  typeChart = new Chart(ctx2, {
+    type:'bar',
+    data:{
+      labels:['Total Views','Avg Views/Video'],
+      datasets:[
+        {label:'Clips',data:[clipViews,clipAvg],backgroundColor:'rgba(255,60,60,0.7)',borderRadius:4},
+        {label:'Episodes',data:[epViews,epAvg],backgroundColor:'rgba(74,158,255,0.7)',borderRadius:4}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#999',boxWidth:10}}},
+      scales:{
+        x:{grid:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>fmtNum(v)}}
+      }
+    }
+  });
+}
+
+function renderVideoTable(filter) {
+  filter = filter || currentFilter;
+  let vids = filter === 'clip' ? allVideos.filter(isClip) :
+             filter === 'episode' ? allVideos.filter(v=>!isClip(v)) : allVideos;
+  document.getElementById('video-count-label').textContent = `${vids.length} videos`;
+  const maxViews = Math.max(...allVideos.map(v=>v.views));
+
+  let html = `<table class="video-table">
+    <thead><tr>
+      <th style="width:80px">Thumb</th>
+      <th>Title</th>
+      <th>Type</th>
+      <th>Published</th>
+      <th>Views</th>
+      <th>Likes</th>
+      <th>Score</th>
+    </tr></thead><tbody>`;
+
+  vids.forEach(v => {
+    const clip = isClip(v);
+    const date = new Date(v.publishedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const barW = Math.round((v.views/maxViews)*100);
+    const score = scoreVideo(v, maxViews);
+    const scoreCls = score==='high'?'score-high':score==='med'?'score-med':'score-low';
+    const scoreLabel = score==='high'?'★ Top':score==='med'?'◆ Mid':'▼ Low';
+    html += `<tr>
+      <td><img class="video-thumb" src="${v.thumbnail}" loading="lazy" onerror="this.style.background='#1a1a1a'"></td>
+      <td class="video-title-cell"><div class="video-title">${v.title}</div></td>
+      <td><span class="type-badge ${clip?'type-clip':'type-episode'}">${clip?'Clip':'Episode'}</span></td>
+      <td><span class="video-date">${date}</span></td>
+      <td><span class="metric-num">${fmtNum(v.views)}</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:${barW}%"></div></div></td>
+      <td><span class="metric-num">${fmtNum(v.likes)}</span></td>
+      <td><span class="score-pill ${scoreCls}">${scoreLabel}</span></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('video-table-container').innerHTML = html;
+}
+
+function filterVideos(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderVideoTable(type);
+}
+
+function renderTopVideos() {
+  const top5 = [...allVideos].sort((a,b)=>b.views-a.views).slice(0,5);
+  const maxV = top5[0]?.views || 1;
+  let html = '';
+  top5.forEach((v,i) => {
+    const pct = Math.round((v.views/maxV)*100);
+    const clip = isClip(v);
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--muted);min-width:24px">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.title}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+          <div style="flex:1;height:3px;background:var(--surface2);border-radius:2px"><div style="width:${pct}%;height:100%;background:var(--accent);border-radius:2px"></div></div>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2)">${fmtNum(v.views)}</span>
+          <span class="type-badge ${clip?'type-clip':'type-episode'}" style="font-size:9px">${clip?'Clip':'Episode'}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('top-videos-list').innerHTML = html;
+}
+
+function renderInsights() {
+  const clips = allVideos.filter(isClip);
+  const episodes = allVideos.filter(v=>!isClip(v));
+  const clipAvg = clips.length ? Math.round(clips.reduce((a,v)=>a+v.views,0)/clips.length) : 0;
+  const epAvg = episodes.length ? Math.round(episodes.reduce((a,v)=>a+v.views,0)/episodes.length) : 0;
+
+  // Day of week analysis
+  const dayViews = Array(7).fill(0);
+  const dayCounts = Array(7).fill(0);
+  allVideos.forEach(v => {
+    const d = new Date(v.publishedAt).getDay();
+    dayViews[d] += v.views;
+    dayCounts[d]++;
+  });
+  const dayAvgs = dayViews.map((v,i)=>dayCounts[i]?Math.round(v/dayCounts[i]):0);
+  const bestDay = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dayAvgs.indexOf(Math.max(...dayAvgs))];
+
+  // Title keyword analysis
+  const words = {};
+  allVideos.forEach(v => {
+    v.title.toLowerCase().split(/\W+/).forEach(w => {
+      if(w.length > 4) words[w] = (words[w]||0) + v.views;
+    });
+  });
+  const topWord = Object.entries(words).sort((a,b)=>b[1]-a[1])[0];
+
+  let html = '';
+  if(clipAvg > epAvg) {
+    html += `<div class="insight-card green"><div class="insight-type">✓ Clips Outperform</div><div class="insight-text">Your clips average <strong>${fmtNum(clipAvg)}</strong> views vs <strong>${fmtNum(epAvg)}</strong> for full episodes. Short-form content is your strongest growth lever right now.</div></div>`;
+  } else {
+    html += `<div class="insight-card"><div class="insight-type">📊 Episodes Lead</div><div class="insight-text">Full episodes average <strong>${fmtNum(epAvg)}</strong> views vs <strong>${fmtNum(clipAvg)}</strong> for clips. Your audience prefers long-form — clips may need stronger hooks.</div></div>`;
+  }
+  html += `<div class="insight-card gold"><div class="insight-type">📅 Best Posting Day</div><div class="insight-text">Videos posted on <strong>${bestDay}</strong> tend to get the most views on average. Try to schedule your best clips for this day.</div></div>`;
+  if(topWord) {
+    html += `<div class="insight-card purple"><div class="insight-type">🔤 High-Value Title Word</div><div class="insight-text">The word "<strong>${topWord[0]}</strong>" appears in your highest-viewed content. Consider making it part of your clip title formula.</div></div>`;
+  }
+  const recent10 = allVideos.slice(0,10);
+  const older = allVideos.slice(10,30);
+  const r10avg = recent10.length ? Math.round(recent10.reduce((a,v)=>a+v.views,0)/recent10.length) : 0;
+  const olderAvg = older.length ? Math.round(older.reduce((a,v)=>a+v.views,0)/older.length) : 0;
+  const trend = r10avg > olderAvg ? 'up' : 'down';
+  html += `<div class="insight-card ${trend==='up'?'green':''}"><div class="insight-type">${trend==='up'?'📈 Momentum Growing':'📉 Views Cooling'}</div><div class="insight-text">Your last 10 videos averaged <strong>${fmtNum(r10avg)}</strong> views vs <strong>${fmtNum(olderAvg)}</strong> for older content. ${trend==='up'?'Channel is gaining momentum!':'Consider refreshing your content formula.'}</div></div>`;
+  document.getElementById('insights-list').innerHTML = html;
+}
+
+function renderStrategy() {
+  renderDowChart();
+  renderMonthlyChart();
+  renderHeatmap();
+  renderTitleFormulas();
+  renderPatterns();
+}
+
+function renderDowChart() {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dayViews = Array(7).fill(0);
+  const dayCounts = Array(7).fill(0);
+  allVideos.forEach(v => {
+    const d = new Date(v.publishedAt).getDay();
+    dayViews[d] += v.views;
+    dayCounts[d]++;
+  });
+  const dayAvgs = dayViews.map((v,i)=>dayCounts[i]?Math.round(v/dayCounts[i]):0);
+  const maxD = Math.max(...dayAvgs);
+  const colors = dayAvgs.map(v => v === maxD ? 'rgba(255,60,60,0.85)' : 'rgba(255,60,60,0.3)');
+
+  if(dowChart) dowChart.destroy();
+  const ctx = document.getElementById('dow-chart').getContext('2d');
+  dowChart = new Chart(ctx, {
+    type:'bar',
+    data:{labels:days,datasets:[{data:dayAvgs,backgroundColor:colors,borderRadius:4}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>fmtNum(v)}}
+      }
+    }
+  });
+}
+
+function renderMonthlyChart() {
+  const monthMap = {};
+  allVideos.forEach(v => {
+    const key = new Date(v.publishedAt).toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+    if(!monthMap[key]) monthMap[key] = {views:0,count:0};
+    monthMap[key].views += v.views;
+    monthMap[key].count++;
+  });
+  const entries = Object.entries(monthMap).reverse().slice(0,12).reverse();
+  const labels = entries.map(e=>e[0]);
+  const data = entries.map(e=>Math.round(e[1].views/e[1].count));
+
+  if(monthlyChart) monthlyChart.destroy();
+  const ctx = document.getElementById('monthly-chart').getContext('2d');
+  const grad = ctx.createLinearGradient(0,0,0,260);
+  grad.addColorStop(0,'rgba(74,158,255,0.3)');
+  grad.addColorStop(1,'rgba(74,158,255,0)');
+  monthlyChart = new Chart(ctx, {
+    type:'line',
+    data:{labels,datasets:[{label:'Avg Views',data,borderColor:'#4a9eff',backgroundColor:grad,borderWidth:2,fill:true,tension:0.4,pointRadius:3}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false}},
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{callback:v=>fmtNum(v)}}
+      }
+    }
+  });
+}
+
+function renderHeatmap() {
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  // Simulate heatmap from day-of-week data (YouTube API doesn't give hour data without Analytics API)
+  const dayViews = Array(7).fill(0);
+  const dayCounts = Array(7).fill(0);
+  allVideos.forEach(v => {
+    let d = new Date(v.publishedAt).getDay();
+    d = d === 0 ? 6 : d-1; // Mon=0
+    dayViews[d] += v.views;
+    dayCounts[d]++;
+  });
+  const dayAvgs = dayViews.map((v,i)=>dayCounts[i]?Math.round(v/dayCounts[i]):0);
+  const maxVal = Math.max(...dayAvgs);
+
+  let html = '<div class="heatmap-grid" style="margin-bottom:12px">';
+  // Header
+  html += '<div></div>';
+  ['Published','Videos','Avg Views','Performance','','',''].forEach(l => {
+    html += `<div class="heatmap-col-label">${l}</div>`;
+  });
+
+  days.forEach((day,i) => {
+    const intensity = maxVal ? dayAvgs[i]/maxVal : 0;
+    const r = Math.round(255*intensity);
+    const count = dayCounts[i];
+    html += `<div class="heatmap-day-label">${day}</div>`;
+    html += `<div class="heatmap-col-label" style="display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text)">${day}</div>`;
+    html += `<div class="heatmap-col-label" style="display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted2)">${count}</div>`;
+    html += `<div class="heatmap-col-label" style="display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text)">${fmtNum(dayAvgs[i])}</div>`;
+    const barW = Math.round(intensity*100);
+    html += `<div style="grid-column:span 3;display:flex;align-items:center;gap:6px;padding:2px 0">
+      <div style="flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden">
+        <div style="width:${barW}%;height:100%;background:rgba(${r},${60+Math.round(intensity*40)},${60},0.8);border-radius:4px;transition:width 0.5s"></div>
+      </div>
+      <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted2);min-width:28px">${Math.round(intensity*100)}%</span>
+    </div>`;
+  });
+  html += '</div>';
+  html += `<p style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Note: YouTube Data API v3 does not provide hour-level posting data without the Analytics API. Shown above is performance by day of week based on publish date.</p>`;
+  document.getElementById('heatmap-container').innerHTML = html;
+}
+
+function renderTitleFormulas() {
+  // Analyze title patterns
+  const patterns = [
+    { name: 'Question format', regex: /\?/, label: '"Who Is...?", "Why Did...?"' },
+    { name: 'Name drop (guest/person)', regex: /[A-Z][a-z]+ [A-Z][a-z]+/, label: '"Mike Jones Reacts..."' },
+    { name: 'Number/list', regex: /\b\d+\b/, label: '"3 Reasons Why..."' },
+    { name: 'Reaction/reacts', regex: /react/i, label: '"We Reacted To..."' },
+    { name: 'Emotion word', regex: /crazy|wild|insane|hilarious|unbelievable|shocking/i, label: '"This Is Crazy..."' },
+    { name: 'Sports reference', regex: /nfl|nba|mlb|nhl|football|basketball|baseball/i, label: 'Sport-specific titles' },
+  ];
+
+  const results = patterns.map(p => {
+    const matching = allVideos.filter(v => p.regex.test(v.title));
+    const avgViews = matching.length ? Math.round(matching.reduce((a,v)=>a+v.views,0)/matching.length) : 0;
+    const globalAvg = allVideos.length ? Math.round(allVideos.reduce((a,v)=>a+v.views,0)/allVideos.length) : 1;
+    const lift = globalAvg ? ((avgViews/globalAvg - 1)*100).toFixed(0) : 0;
+    return { ...p, count: matching.length, avgViews, lift: parseInt(lift) };
+  }).filter(r=>r.count>0).sort((a,b)=>b.avgViews-a.avgViews);
+
+  let html = '';
+  results.slice(0,6).forEach((r,i) => {
+    const color = r.lift > 20 ? 'var(--green)' : r.lift > 0 ? 'var(--gold)' : 'var(--muted2)';
+    html += `<div class="formula-row">
+      <div class="formula-rank">${i+1}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${r.name}</div>
+        <div class="formula-example">${r.label} · ${r.count} videos</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--text)">${fmtNum(r.avgViews)}</div>
+        <div style="font-size:11px;color:${color}">${r.lift > 0 ? '+' : ''}${r.lift}% vs avg</div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('title-formulas').innerHTML = html || '<div class="empty">Not enough data</div>';
+}
+
+function renderPatterns() {
+  const sorted = [...allVideos].sort((a,b)=>b.views-a.views);
+  const top10 = sorted.slice(0,Math.ceil(sorted.length*0.2));
+  const bot10 = sorted.slice(-Math.ceil(sorted.length*0.2));
+
+  const avgDescLen = (arr) => arr.length ? Math.round(arr.reduce((a,v)=>a+v.description.length,0)/arr.length) : 0;
+  const avgTitleLen = (arr) => arr.length ? Math.round(arr.reduce((a,v)=>a+v.title.length,0)/arr.length) : 0;
+
+  let html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:'DM Mono',monospace;margin-bottom:12px">✓ Top 20% of Videos</div>
+      <div style="font-size:13px;color:var(--text);line-height:2">
+        <div>Avg title length: <strong>${avgTitleLen(top10)} chars</strong></div>
+        <div>Avg description length: <strong>${avgDescLen(top10)} chars</strong></div>
+        <div>Clips in top 20%: <strong>${top10.filter(isClip).length}/${top10.length}</strong></div>
+        <div>Most common day: <strong>${getMostCommonDay(top10)}</strong></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);font-family:'DM Mono',monospace;margin-bottom:12px">✗ Bottom 20% of Videos</div>
+      <div style="font-size:13px;color:var(--text);line-height:2">
+        <div>Avg title length: <strong>${avgTitleLen(bot10)} chars</strong></div>
+        <div>Avg description length: <strong>${avgDescLen(bot10)} chars</strong></div>
+        <div>Clips in bottom 20%: <strong>${bot10.filter(isClip).length}/${bot10.length}</strong></div>
+        <div>Most common day: <strong>${getMostCommonDay(bot10)}</strong></div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('pattern-analysis').innerHTML = html;
+}
+
+function getMostCommonDay(videos) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const counts = Array(7).fill(0);
+  videos.forEach(v => counts[new Date(v.publishedAt).getDay()]++);
+  return days[counts.indexOf(Math.max(...counts))];
+}
+
+function renderAiSnapshot() {
+  const clips = allVideos.filter(isClip);
+  const episodes = allVideos.filter(v=>!isClip(v));
+  const sorted = [...allVideos].sort((a,b)=>b.views-a.views);
+  const top3 = sorted.slice(0,3).map(v=>`• "${v.title.slice(0,50)}" — ${fmtNum(v.views)} views`).join('\n');
+
+  const html = `<div style="line-height:2;font-size:13px;color:var(--text)">
+    <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px">Channel</div>
+      <div>Circling Back Podcast</div>
+    </div>
+    <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px">Content Mix</div>
+      <div>${clips.length} clips · ${episodes.length} episodes</div>
+    </div>
+    <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px">Top Performers</div>
+      ${sorted.slice(0,3).map(v=>`<div style="font-size:12px;color:var(--muted2);margin-bottom:4px">"${v.title.slice(0,45)}..." · <span style="color:var(--green)">${fmtNum(v.views)}</span></div>`).join('')}
+    </div>
+    <div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px">Total Views (loaded)</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--accent)">${fmtNum(allVideos.reduce((a,v)=>a+v.views,0))}</div>
+    </div>
+  </div>`;
+  document.getElementById('ai-snapshot').innerHTML = html;
+}
+
+function buildChannelContext() {
+  if(!allVideos.length) return 'No data loaded yet.';
+  const clips = allVideos.filter(isClip);
+  const episodes = allVideos.filter(v=>!isClip(v));
+  const sorted = [...allVideos].sort((a,b)=>b.views-a.views);
+  const top10 = sorted.slice(0,10).map(v=>`"${v.title}" (${fmtNum(v.views)} views, ${isClip(v)?'clip':'episode'}, ${new Date(v.publishedAt).toDateString()})`).join('\n');
+  const bot5 = sorted.slice(-5).map(v=>`"${v.title}" (${fmtNum(v.views)} views)`).join('\n');
+  const totalViews = allVideos.reduce((a,v)=>a+v.views,0);
+  const clipAvg = clips.length ? Math.round(clips.reduce((a,v)=>a+v.views,0)/clips.length) : 0;
+  const epAvg = episodes.length ? Math.round(episodes.reduce((a,v)=>a+v.views,0)/episodes.length) : 0;
+
+  return `You are a social media strategist for "Circling Back", a podcast on YouTube that also publishes short clips. Here is their real YouTube data:
+
+CHANNEL: Circling Back (Washed Media)
+TOTAL VIDEOS ANALYZED: ${allVideos.length} (${clips.length} clips, ${episodes.length} full episodes)
+TOTAL VIEWS: ${fmtNum(totalViews)}
+CLIP AVG VIEWS: ${fmtNum(clipAvg)}
+EPISODE AVG VIEWS: ${fmtNum(epAvg)}
+
+TOP 10 VIDEOS:
+${top10}
+
+LOWEST PERFORMERS:
+${bot5}
+
+RECENT TITLES (last 10):
+${allVideos.slice(0,10).map(v=>`"${v.title}"`).join('\n')}
+
+Based on this real data, answer the user's question with specific, actionable advice. Reference actual video titles and numbers where relevant. Be direct and opinionated — you are a strategist, not a generic assistant. Keep responses concise and punchy.`;
+}
+
+async function runPrompt(promptText) {
+  const input = document.getElementById('ai-prompt');
+  const responseEl = document.getElementById('ai-response');
+  const userPrompt = promptText || input.value.trim();
+  if(!userPrompt) return;
+  if(!allVideos.length) {
+    responseEl.textContent = '⚠ Load your YouTube data first using the "Load Data" button above.';
+    responseEl.classList.add('loading');
+    return;
+  }
+
+  input.value = '';
+  responseEl.classList.add('loading');
+  responseEl.textContent = 'Analyzing your channel data...';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system: buildChannelContext(),
+        messages:[{role:'user',content:userPrompt}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.map(c=>c.text||'').join('') || 'No response.';
+    responseEl.textContent = text;
+    responseEl.classList.remove('loading');
+  } catch(e) {
+    responseEl.textContent = 'Error: ' + e.message;
+    responseEl.classList.remove('loading');
+  }
+}
+</script>
+</body>
+</html>
